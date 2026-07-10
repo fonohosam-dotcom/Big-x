@@ -30,6 +30,7 @@ export default function LoginView() {
       else if (role === 'researcher') navigate('/researcher');
       else if (role === 'donor') navigate('/donor');
       else if (role === 'medical') navigate('/medical');
+      else if (role === 'charity') navigate('/charity');
       else navigate('/citizen');
       
     } catch (err: any) {
@@ -109,12 +110,13 @@ export default function LoginView() {
       
       <div className="mt-8 pt-6 border-t border-slate-100">
         <p className="text-xs text-center text-slate-500 mb-4 font-bold">دخول تجريبي سريع (لأغراض العرض)</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           <button type="button" onClick={() => handleTestLogin('citizen')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">مواطن (Citizen)</button>
           <button type="button" onClick={() => handleTestLogin('donor')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">متبرع (Donor)</button>
           <button type="button" onClick={() => handleTestLogin('researcher')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">باحث (Researcher)</button>
           <button type="button" onClick={() => handleTestLogin('admin')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">إدارة (Admin)</button>
-          <button type="button" onClick={() => handleTestLogin('medical')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 rounded-lg text-xs font-bold transition-colors col-span-2">مركز طبي (Medical)</button>
+          <button type="button" onClick={() => handleTestLogin('medical')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">طبي (Medical)</button>
+          <button type="button" onClick={() => handleTestLogin('charity')} disabled={isSeeding} className="py-2 px-3 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 text-slate-600 rounded-lg text-xs font-bold transition-colors">جمعية (Charity)</button>
         </div>
       </div>
     </div>

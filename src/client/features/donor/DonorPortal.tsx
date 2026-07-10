@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
 import { useState } from 'react';
+import { Link } from 'react-router';
 
 export default function DonorPortal() {
   const queryClient = useQueryClient();
@@ -50,6 +51,11 @@ export default function DonorPortal() {
             <p className="text-xs text-slate-500 mb-1">حالات قمت بمساعدتها</p>
             <p className="text-xl font-bold text-blue-600">4 عائلات</p>
           </div>
+          
+          <Link to="/donor/maps" className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors mt-auto border border-slate-200 flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            البحث عبر الخرائط
+          </Link>
         </div>
       </div>
 

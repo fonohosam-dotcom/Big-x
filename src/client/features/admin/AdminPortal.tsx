@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
+import { Link } from 'react-router';
 
 export default function AdminPortal() {
   const queryClient = useQueryClient();
-
   const { data: cases, isLoading } = useQuery({
     queryKey: ['all-cases-admin'],
     queryFn: () => api.get('/cases')
@@ -40,6 +40,12 @@ export default function AdminPortal() {
           </div>
         </div>
         
+        <Link to="/admin/infrastructure" className="w-full py-3 mb-2 bg-slate-800 text-center rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors border border-slate-700">
+          مراقبة البنية التحتية
+        </Link>
+        <Link to="/admin/security" className="w-full py-3 mb-4 bg-red-900/50 text-red-100 text-center rounded-xl text-sm font-bold hover:bg-red-800/80 transition-colors border border-red-800">
+          خزنة التدقيق الأمني (Vault)
+        </Link>
         <button className="w-full py-3 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-500 transition-colors mt-auto">
           إصدار التقارير النهائية
         </button>

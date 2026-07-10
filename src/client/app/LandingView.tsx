@@ -77,14 +77,19 @@ export default function LandingView() {
       </div>
 
        {/* Footer banner spans 8 cols, 2 rows */}
-       <div className="col-span-1 md:col-span-8 md:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-center justify-between">
+       <div className="col-span-1 md:col-span-8 md:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">دفتر الأستاذ غير القابل للتعديل</h3>
-            <p className="text-sm text-slate-500">جميع العمليات مسجلة بشفافية في قاعدة البيانات الموزعة.</p>
+            <h3 className="text-lg font-bold text-slate-800">الشفافية والمصداقية (Ledger & Verify)</h3>
+            <p className="text-sm text-slate-500">جميع العمليات مسجلة بشفافية في قاعدة البيانات. ويمكن لأي شخص التحقق من الحالات.</p>
           </div>
-          <button onClick={() => navigate('/ledger')} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-200">
-            عرض السجلات
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/ledger')} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-200">
+              سجل الشفافية
+            </button>
+            <button onClick={() => navigate('/verify')} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 border border-blue-200">
+              تحقق من حالة
+            </button>
+          </div>
        </div>
 
     </div>

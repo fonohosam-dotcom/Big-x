@@ -1,10 +1,20 @@
 import { Router } from 'express';
 import { db } from '../../db/index.ts';
-import { cases, documents } from '../../db/schema.ts';
+import { cases, documents, caseEvaluations } from '../../db/schema.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middlewares/requireAuth.ts';
 import { uploadHandler } from '../middlewares/uploadHandler.ts';
 import { intakeCaseSchema } from '../../shared/schemas/index.ts';
 import { eq } from 'drizzle-orm';
+import { GoogleGenAI, Type } from '@google/genai';
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 const router = Router();
 
@@ -32,15 +42,35 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userRole = req.user!.role;
     let queryResult;
-
     if (userRole === 'citizen') {
       queryResult = await db.select().from(cases).where(eq(cases.citizenId, req.user!.userId));
     } else {
-      // Researcher, Admin, etc can see all (for simplicity, real app would filter by municipality for researcher)
       queryResult = await db.select().from(cases);
     }
     
     res.json(queryResult);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/:id/public-verify', async (req, res) => {
+  try {
+    const caseId = req.params.id;
+    // Do not require auth for this specific endpoint
+    const queryResult = await db.select({
+      id: cases.id,
+      needsType: cases.needsType,
+      status: cases.status,
+      requiredAmount: cases.requiredAmount,
+      collectedAmount: cases.collectedAmount
+    }).from(cases).where(eq(cases.id, caseId)).limit(1);
+
+    if (queryResult.length === 0) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    
+    res.json(queryResult[0]);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -51,7 +81,14 @@ router.put('/:id/verify', requireAuth, requireRole('researcher'), async (req: Au
     const caseId = req.params.id;
     const { evaluationScore, researcherNotes, status } = req.body;
     
-    // In a real app, we'd also insert into case_evaluations
+    // Insert evaluation
+    await db.insert(caseEvaluations).values({
+      caseId,
+      researcherId: req.user!.userId,
+      evaluationScore: evaluationScore || 0,
+      researcherNotes: researcherNotes || ''
+    });
+
     const [updated] = await db.update(cases)
       .set({ status: status || 'under_review' })
       .where(eq(cases.id, caseId))
@@ -66,19 +103,55 @@ router.put('/:id/verify', requireAuth, requireRole('researcher'), async (req: Au
 router.post('/:id/analyze', requireAuth, requireRole('researcher'), async (req: AuthRequest, res) => {
   try {
     const caseId = req.params.id;
-    // In a real app, this would send data to Gemini API
-    // Mocking Gemini response for now:
-    const mockAnalysis = {
-      summary: "بناءً على سجل المعاملات التاريخي والنمو الديموغرافي، تظهر الحالة حاجة ملحة بنسبة ثقة عالية. لا توجد تكرارات في السجلات الوطنية (Drizzle Sync).",
-      confidence: 92,
-      recommendation: "أولوية قصوى"
-    };
     
-    res.json(mockAnalysis);
+    const caseDataList = await db.select().from(cases).where(eq(cases.id, caseId)).limit(1);
+    if (!caseDataList.length) throw new Error('Case not found');
+    const caseData = caseDataList[0];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `Analyze this charity case for urgency and fraud potential. Case details: Needs: ${caseData.needsType}, Description: ${caseData.description}, Amount: ${caseData.requiredAmount}, Location: ${caseData.municipality}`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: {
+              type: Type.STRING,
+              description: "A summary of the case analysis in Arabic.",
+            },
+            confidence: {
+              type: Type.NUMBER,
+              description: "Confidence score from 0 to 100 on the legitimacy and urgency.",
+            },
+            recommendation: {
+              type: Type.STRING,
+              description: "Short recommendation like 'أولوية قصوى' or 'مراجعة دقيقة'.",
+            },
+          },
+          required: ["summary", "confidence", "recommendation"],
+        },
+      },
+    });
+
+    let aiAnalysis = {};
+    try {
+       aiAnalysis = JSON.parse(response.text || '{}');
+    } catch (e) {
+       console.error("Failed to parse Gemini response");
+    }
+
+    // Update case with AI analysis
+    await db.update(caseEvaluations)
+      .set({ aiAnalysis })
+      .where(eq(caseEvaluations.caseId, caseId));
+
+    res.json(aiAnalysis);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
+
 router.put('/:id/approve', requireAuth, requireRole('admin'), async (req: AuthRequest, res) => {
   try {
     const caseId = req.params.id;

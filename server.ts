@@ -5,10 +5,14 @@ import cors from "cors";
 import helmet from "helmet";
 import { generalLimiter } from "./src/server/middlewares/rateLimiter";
 import apiRoutes from "./src/server/routes";
+import { setupCronJobs } from "./src/server/jobs/cron.ts";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Start background jobs
+  setupCronJobs();
 
   // Middlewares
   app.use(cors());
