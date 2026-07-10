@@ -8,11 +8,11 @@ const router = Router();
 
 router.get('/fund', requireAuth, requireRole('charity'), async (req, res) => {
   try {
-    const charityFundList = await db.select().from(funds).where(eq(funds.charityId, req.user!.userId)).limit(1);
+    const charityFundList = await db.select().from(funds).where(eq(funds.charityId, (req as any).user.userId)).limit(1);
     if (charityFundList.length === 0) {
        // Auto-create a mock fund for the charity on first login
        const [newFund] = await db.insert(funds).values({
-         charityId: req.user!.userId,
+         charityId: (req as any).user.userId,
          name: 'صندوق الاستجابة السريعة',
          balance: '5000'
        }).returning();
@@ -30,7 +30,7 @@ router.post('/disburse', requireAuth, requireRole('charity'), async (req, res) =
     const { caseId, amount } = req.body;
     
     // Get charity fund
-    const charityFundList = await db.select().from(funds).where(eq(funds.charityId, req.user!.userId)).limit(1);
+    const charityFundList = await db.select().from(funds).where(eq(funds.charityId, (req as any).user.userId)).limit(1);
     if (!charityFundList.length) throw new Error('Fund not found');
     const fund = charityFundList[0];
     
@@ -61,7 +61,7 @@ router.post('/disburse', requireAuth, requireRole('charity'), async (req, res) =
     
     // Record transaction
     await db.insert(transactions).values({
-      entityId: req.user!.userId,
+      entityId: (req as any).user.userId,
       entityType: 'charity',
       amount: amount.toString(),
       type: 'debit',

@@ -6,17 +6,23 @@ import helmet from "helmet";
 import { generalLimiter } from "./src/server/middlewares/rateLimiter";
 import apiRoutes from "./src/server/routes";
 import { setupCronJobs } from "./src/server/jobs/cron.ts";
+import { initDb } from "./src/db/init.ts";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  await initDb();
+
   // Start background jobs
   setupCronJobs();
 
   // Middlewares
-  app.use(cors());
-  app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP for dev to allow Vite HMR/styles
+  app.use(cors({
+    origin: true,
+    credentials: true,
+  }));
+  app.use(helmet({ contentSecurityPolicy: false })); // Keep false for Vite dev
   app.use(express.json());
   app.use(generalLimiter);
 

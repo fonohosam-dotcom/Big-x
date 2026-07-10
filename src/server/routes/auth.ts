@@ -8,6 +8,13 @@ import { loginSchema, registerSchema } from '../../shared/schemas/index.ts';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refreshsecret';
+
+const generateTokens = (user: any) => {
+  const accessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
+  const refreshToken = jwt.sign({ userId: user.id, role: user.role }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return { accessToken, refreshToken };
+};
 
 router.post('/login', async (req, res) => {
   try {
@@ -25,8 +32,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ accessToken: token, user: { id: user.id, name: user.name, role: user.role } });
+    const tokens = generateTokens(user);
+    res.json({ ...tokens, user: { id: user.id, name: user.name, role: user.role } });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
+
+    jwt.verify(refreshToken, JWT_REFRESH_SECRET, (err: any, decoded: any) => {
+      if (err) return res.status(403).json({ error: 'Invalid refresh token' });
+      const tokens = generateTokens({ id: decoded.userId, role: decoded.role });
+      res.json(tokens);
+    });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -65,7 +87,7 @@ router.post('/seed', async (req, res) => {
     const defaultPassword = 'password123';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
     
-    const roles = ['citizen', 'donor', 'researcher', 'admin', 'medical'];
+    const roles = ['citizen', 'donor', 'researcher', 'admin', 'medical', 'charity'];
     const createdUsers = [];
     
     for (const role of roles) {

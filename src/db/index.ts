@@ -1,21 +1,13 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/pglite';
+import { PGlite } from '@electric-sql/pglite';
 import * as schema from './schema.ts';
 
-export const createPool = () => {
-  return new Pool({
-    host: process.env.SQL_HOST || 'localhost',
-    user: process.env.SQL_USER || 'postgres',
-    password: process.env.SQL_PASSWORD || 'postgres',
-    database: process.env.SQL_DB_NAME || 'takaful',
-    connectionTimeoutMillis: 15000,
-  });
+// Use a global in-memory instance so that multiple imports share the same DB in dev
+const globalForDb = globalThis as unknown as {
+  pgliteClient: PGlite | undefined;
 };
 
-const pool = createPool();
+const client = globalForDb.pgliteClient ?? new PGlite();
+if (process.env.NODE_ENV !== 'production') globalForDb.pgliteClient = client;
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle SQL pool client:', err);
-});
-
-export const db = drizzle(pool, { schema });
+export const db = drizzle(client, { schema });

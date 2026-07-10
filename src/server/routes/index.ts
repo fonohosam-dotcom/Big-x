@@ -6,6 +6,7 @@ import medicalRouter from './medical.ts';
 import ledgerRouter from './ledger.ts';
 import leaderboardRouter from './leaderboard.ts';
 import charityRouter from './charity.ts';
+import aiRouter from './ai.ts';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/medical', medicalRouter);
 router.use('/ledger', ledgerRouter);
 router.use('/leaderboard', leaderboardRouter);
 router.use('/charity', charityRouter);
+router.use('/ai', aiRouter);
 
 export default router;
 
