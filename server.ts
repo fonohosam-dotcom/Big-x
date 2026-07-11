@@ -7,12 +7,16 @@ import { generalLimiter } from "./src/server/middlewares/rateLimiter";
 import apiRoutes from "./src/server/routes";
 import { setupCronJobs } from "./src/server/jobs/cron.ts";
 import { initDb } from "./src/db/init.ts";
+import { seed } from "./src/db/seed.ts";
+import { activeUsersMap } from "./src/server/routes/stats.ts";
 
 async function startServer() {
   const app = express();
+  app.set('trust proxy', 1); // Trust the first proxy (e.g. Nginx, Cloud Run)
   const PORT = 3000;
 
   await initDb();
+  await seed();
 
   // Start background jobs
   setupCronJobs();
@@ -24,7 +28,13 @@ async function startServer() {
   }));
   app.use(helmet({ contentSecurityPolicy: false })); // Keep false for Vite dev
   app.use(express.json());
-  app.use(generalLimiter);
+  app.use('/api', generalLimiter);
+
+  app.use((req, res, next) => {
+    const ip = req.ip || 'unknown';
+    activeUsersMap.set(ip, Date.now());
+    next();
+  });
 
   // API Routes
   app.use("/api", apiRoutes);

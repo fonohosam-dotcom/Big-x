@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
-import { useState } from 'react';
+import { useNotificationStore } from '../../stores/notificationStore.ts';
 
 export default function CharityPortal() {
   const queryClient = useQueryClient();
-  const [successMsg, setSuccessMsg] = useState('');
+  const { addNotification } = useNotificationStore();
 
   const { data: fund } = useQuery({
     queryKey: ['charity-fund'],
@@ -20,10 +20,12 @@ export default function CharityPortal() {
     mutationFn: (data: { caseId: string, amount: number }) => 
       api.post('/charity/disburse', data),
     onSuccess: () => {
-      setSuccessMsg('تم صرف المبلغ بنجاح');
+      addNotification('تم صرف المبلغ بنجاح', 'success');
       queryClient.invalidateQueries({ queryKey: ['charity-fund'] });
       queryClient.invalidateQueries({ queryKey: ['approved-cases'] });
-      setTimeout(() => setSuccessMsg(''), 5000);
+    },
+    onError: (error: any) => {
+      addNotification(error.message || 'فشل عملية الصرف', 'error');
     }
   });
 
@@ -45,12 +47,6 @@ export default function CharityPortal() {
           )}
         </div>
       </div>
-
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl font-bold text-sm">
-          {successMsg}
-        </div>
-      )}
 
       {/* Cases needing funding */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 relative overflow-hidden">

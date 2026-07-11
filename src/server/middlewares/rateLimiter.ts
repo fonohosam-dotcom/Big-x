@@ -6,6 +6,10 @@ export const authLimiter = rateLimit({
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+  }
 });
 
 export const generalLimiter = rateLimit({
@@ -13,4 +17,8 @@ export const generalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+  }
 });

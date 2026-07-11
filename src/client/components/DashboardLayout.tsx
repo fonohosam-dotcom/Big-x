@@ -1,7 +1,8 @@
+import { Outlet } from 'react-router';
 import { ReactNode } from 'react';
 import { useAuthStore } from '../stores/authStore.ts';
 import { useNavigate, Link, useLocation } from 'react-router';
-import { LogOut, LayoutDashboard, FileText, Heart, ShieldCheck, Database, FilePlus } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, Heart, ShieldCheck, Database, FilePlus, Home, Map, Trophy, ClipboardCheck, Activity, Users, Landmark, Lock, BarChart } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuthStore();
@@ -16,23 +17,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const role = user?.role;
 
   const navLinks = [
+    { path: '/', label: 'الرئيسية', icon: <Home size={20} /> },
+    { path: '/ledger', label: 'مركز الشفافية', icon: <Database size={20} /> },
+    { path: '/donor/maps', label: 'الخرائط التفاعلية', icon: <Map size={20} /> },
+    { path: '/leaderboard', label: 'لوحة المتصدرين', icon: <Trophy size={20} /> },
     ...(role === 'citizen' ? [
-      { path: '/citizen', label: 'لوحة التحكم', icon: <LayoutDashboard size={20} /> },
-      { path: '/citizen/intake', label: 'تقديم طلب جديد', icon: <FilePlus size={20} /> }
+      { path: '/citizen', label: 'لوحتي الشخصية', icon: <LayoutDashboard size={20} /> },
+      { path: '/citizen/intake', label: 'تقديم طلب', icon: <FilePlus size={20} /> }
     ] : []),
     ...(role === 'donor' ? [
-      { path: '/donor', label: 'لوحة التأثير', icon: <Heart size={20} /> }
+      { path: '/donor', label: 'سجل تبرعاتي', icon: <Heart size={20} /> },
+      { path: '/leaderboard', label: 'لوحة التأثير', icon: <Trophy size={20} /> }
     ] : []),
     ...(role === 'researcher' ? [
-      { path: '/researcher', label: 'المراجعة الميدانية', icon: <FileText size={20} /> }
+      { path: '/researcher', label: 'المهام الميدانية', icon: <FileText size={20} /> },
+      { path: '/researcher?tab=eval', label: 'تقييم الحالات', icon: <ClipboardCheck size={20} /> }
     ] : []),
     ...(role === 'admin' ? [
-      { path: '/admin', label: 'الاعتمادات', icon: <ShieldCheck size={20} /> }
+      { path: '/admin', label: 'التحكم الشامل', icon: <ShieldCheck size={20} /> },
+      { path: '/admin/security', label: 'قبو التدقيق الأمني', icon: <Lock size={20} /> },
+      { path: '/admin/reports', label: 'بوابة التقارير والإحصائيات', icon: <BarChart size={20} /> }
     ] : []),
     ...(role === 'medical' ? [
-      { path: '/medical', label: 'المخزون الطبي', icon: <Database size={20} /> }
+      { path: '/medical', label: 'إدارة المخزون', icon: <Database size={20} /> },
+      { path: '/medical?tab=approved', label: 'الحالات الطبية المعتمدة', icon: <Activity size={20} /> }
     ] : []),
-    { path: '/ledger', label: 'الدفتر العام', icon: <Database size={20} /> }
+    ...(role === 'charity' ? [
+      { path: '/charity', label: 'صندوق الجمعية', icon: <Landmark size={20} /> },
+      { path: '/charity?tab=adopted', label: 'الحالات المتبناة', icon: <Users size={20} /> },
+      { path: '/admin/reports', label: 'بوابة التقارير والإحصائيات', icon: <BarChart size={20} /> }
+    ] : [])
   ];
 
   return (
@@ -138,7 +152,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 overflow-auto p-4 md:p-8">
           <div className="max-w-6xl mx-auto">
-            {children}
+            {children || <Outlet />}
           </div>
         </main>
       </div>

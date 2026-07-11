@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router';
 import DashboardLayout from './client/components/DashboardLayout.tsx';
 import { ProtectedRoute } from './client/routes/ProtectedRoute.tsx';
+import { Notifications } from './client/components/Notifications.tsx';
 
 // Portals
 import LandingView from './client/app/LandingView.tsx';
@@ -19,6 +20,7 @@ import CharityPortal from './client/features/charity/CharityPortal.tsx';
 import InfrastructurePortal from './client/features/infrastructure/InfrastructurePortal.tsx';
 import PublicVerifyPortal from './client/features/public/PublicVerifyPortal.tsx';
 import SecurityAuditVault from './client/features/security/SecurityAuditVault.tsx';
+import ReportsPortal from './client/features/reports/ReportsPortal.tsx';
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <Notifications />
         <Routes>
           <Route path="/" element={<DashboardLayout><LandingView /></DashboardLayout>} />
           <Route path="/login" element={<DashboardLayout><LoginView /></DashboardLayout>} />
@@ -39,7 +42,7 @@ export default function App() {
             <Route path="/medical" element={<MedicalPortal />} />
           </Route>
           
-          <Route element={<DashboardLayout><ProtectedRoute allowedRoles={['donor']} /></DashboardLayout>}>
+          <Route element={<DashboardLayout><Outlet /></DashboardLayout>}>
             <Route path="/donor" element={<DonorPortal />} />
             <Route path="/donor/maps" element={<MapsSearchPortal />} />
           </Route>
@@ -50,6 +53,7 @@ export default function App() {
 
           <Route element={<DashboardLayout><ProtectedRoute allowedRoles={['charity', 'admin']} /></DashboardLayout>}>
             <Route path="/charity" element={<CharityPortal />} />
+            <Route path="/admin/reports" element={<ReportsPortal />} />
           </Route>
           
           <Route element={<DashboardLayout><ProtectedRoute allowedRoles={['admin']} /></DashboardLayout>}>

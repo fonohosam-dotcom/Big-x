@@ -110,4 +110,49 @@ router.post('/seed', async (req, res) => {
   }
 });
 
+router.post('/oauth/:provider', async (req, res) => {
+  try {
+    const { provider } = req.params; // 'google' | 'apple'
+    const { email, name, providerId } = req.body;
+    
+    if (!email || !providerId) {
+      return res.status(400).json({ error: 'Email and Provider ID are required' });
+    }
+    
+    let userResult = await db.select().from(users).where(eq(users.email, email));
+    let user;
+    
+    if (userResult.length === 0) {
+      // Create user without password (or dummy password)
+      const passwordHash = await bcrypt.hash(Math.random().toString(), 10);
+      
+      const insertData: any = {
+        name: name || 'مستخدم جديد',
+        email,
+        passwordHash,
+        role: 'citizen',
+      };
+      if (provider === 'google') insertData.googleId = providerId;
+      if (provider === 'apple') insertData.appleId = providerId;
+
+      const [newUser] = await db.insert(users).values(insertData).returning();
+      user = newUser;
+    } else {
+      user = userResult[0];
+      // Link provider id if missing
+      if (provider === 'google' && !user.googleId) {
+        await db.update(users).set({ googleId: providerId }).where(eq(users.id, user.id));
+      }
+      if (provider === 'apple' && !user.appleId) {
+        await db.update(users).set({ appleId: providerId }).where(eq(users.id, user.id));
+      }
+    }
+    
+    const tokens = generateTokens(user);
+    res.json({ ...tokens, user: { id: user.id, name: user.name, role: user.role } });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 export default router;

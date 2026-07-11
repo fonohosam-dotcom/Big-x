@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
 import { Link } from 'react-router';
+import { useNotificationStore } from '../../stores/notificationStore.ts';
 
 export default function AdminPortal() {
   const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
   const { data: cases, isLoading } = useQuery({
     queryKey: ['all-cases-admin'],
     queryFn: () => api.get('/cases')
@@ -12,7 +14,11 @@ export default function AdminPortal() {
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.put(`/cases/${id}/approve`, {}),
     onSuccess: () => {
+      addNotification('تم الاعتماد بنجاح', 'success');
       queryClient.invalidateQueries({ queryKey: ['all-cases-admin'] });
+    },
+    onError: (error: any) => {
+      addNotification(error.message || 'فشل الاعتماد', 'error');
     }
   });
 
@@ -46,9 +52,29 @@ export default function AdminPortal() {
         <Link to="/admin/security" className="w-full py-3 mb-4 bg-red-900/50 text-red-100 text-center rounded-xl text-sm font-bold hover:bg-red-800/80 transition-colors border border-red-800">
           خزنة التدقيق الأمني (Vault)
         </Link>
-        <button className="w-full py-3 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-500 transition-colors mt-auto">
+                <button className="w-full py-3 bg-blue-600 rounded-xl text-sm font-bold hover:bg-blue-500 transition-colors mt-auto">
           إصدار التقارير النهائية
         </button>
+
+        <div className="mt-8 border-t border-slate-700 pt-6">
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">بيانات التجربة والعرض</p>
+          <button 
+            onClick={async () => {
+              if (window.confirm('هل أنت متأكد من حذف جميع البيانات التجريبية؟ لا يمكن التراجع عن هذا الإجراء.')) {
+                try {
+                  await api.post('/admin/purge-demo', {});
+                  addNotification('تم حذف البيانات التجريبية بنجاح.', 'success');
+                  queryClient.invalidateQueries();
+                } catch (e) {
+                  addNotification('فشل حذف البيانات التجريبية.', 'error');
+                }
+              }
+            }}
+            className="w-full py-3 bg-red-600 rounded-xl text-sm font-bold hover:bg-red-500 transition-colors text-white"
+          >
+            حذف البيانات التجريبية
+          </button>
+        </div>
       </div>
 
       {/* Main Approval Queue */}

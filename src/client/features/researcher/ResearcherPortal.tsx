@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
 import { useState } from 'react';
+import { useNotificationStore } from '../../stores/notificationStore.ts';
 
 export default function ResearcherPortal() {
   const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
@@ -14,16 +16,26 @@ export default function ResearcherPortal() {
 
   const analyzeMutation = useMutation({
     mutationFn: (caseId: string) => api.post(`/cases/${caseId}/analyze`, {}),
-    onSuccess: (data) => setAiAnalysis(data)
+    onSuccess: (data) => {
+      setAiAnalysis(data);
+      addNotification('تم استلام تقرير الذكاء الاصطناعي', 'info');
+    },
+    onError: (error: any) => {
+      addNotification(error.message || 'فشل تحليل الذكاء الاصطناعي', 'error');
+    }
   });
 
   const verifyMutation = useMutation({
     mutationFn: ({ id, score, notes }: { id: string, score: number, notes: string }) => 
       api.put(`/cases/${id}/verify`, { evaluationScore: score, researcherNotes: notes, status: 'approved' }),
     onSuccess: () => {
+      addNotification('تم اعتماد الحالة بنجاح', 'success');
       queryClient.invalidateQueries({ queryKey: ['all-cases'] });
       setSelectedCaseId(null);
       setAiAnalysis(null);
+    },
+    onError: (error: any) => {
+      addNotification(error.message || 'فشل التوثيق', 'error');
     }
   });
 

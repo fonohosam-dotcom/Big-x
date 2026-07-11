@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { db } from '../../db/index.ts';
-import { cases, documents, caseEvaluations } from '../../db/schema.ts';
+import { cases, documents, caseEvaluations, caseVotes } from '../../db/schema.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middlewares/requireAuth.ts';
 import { uploadHandler } from '../middlewares/uploadHandler.ts';
 import { intakeCaseSchema } from '../../shared/schemas/index.ts';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { GoogleGenAI, Type } from '@google/genai';
 
 const ai = new GoogleGenAI({
@@ -18,9 +18,36 @@ const ai = new GoogleGenAI({
 
 const router = Router();
 
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, uploadHandler.fields([
+  { name: 'passportImage', maxCount: 1 },
+  { name: 'cancelledCheck', maxCount: 1 },
+  { name: 'livingConditions', maxCount: 5 }
+]), async (req: AuthRequest, res) => {
   try {
-    const data = intakeCaseSchema.parse(req.body);
+    // Parse numeric/JSON fields properly from formdata
+    const parsedBody = {
+      ...req.body,
+      requiredAmount: req.body.requiredAmount ? Number(req.body.requiredAmount) : undefined,
+      locationLat: req.body.locationLat ? Number(req.body.locationLat) : undefined,
+      locationLng: req.body.locationLng ? Number(req.body.locationLng) : undefined,
+      familyMembersCount: req.body.familyMembersCount ? Number(req.body.familyMembersCount) : undefined,
+    };
+
+    const data = intakeCaseSchema.parse(parsedBody);
+    
+    // Update User KYC
+    const { users } = await import('../../db/schema.ts');
+    await db.update(users).set({
+      nationalId: data.nationalId,
+      phone: data.phone,
+      maritalStatus: data.maritalStatus,
+      familyMembersCount: data.familyMembersCount,
+      passportNumber: data.passportNumber,
+      localBankAccount: data.localBankAccount,
+      iban: data.iban,
+    }).where(eq(users.id, req.user!.userId));
+
+    // Create Case
     const [newCase] = await db.insert(cases).values({
       citizenId: req.user!.userId,
       status: 'pending',
@@ -32,9 +59,57 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       locationLng: data.locationLng?.toString(),
     }).returning();
     
+    // Save documents
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const docInserts = [];
+    
+    if (files.passportImage?.[0]) {
+      docInserts.push({ caseId: newCase.id, url: files.passportImage[0].path, type: 'passport' });
+    }
+    if (files.cancelledCheck?.[0]) {
+      docInserts.push({ caseId: newCase.id, url: files.cancelledCheck[0].path, type: 'cancelled_check' });
+    }
+    if (files.livingConditions) {
+      files.livingConditions.forEach(f => {
+        docInserts.push({ caseId: newCase.id, url: f.path, type: 'living_condition' });
+      });
+    }
+    
+    if (docInserts.length > 0) {
+      await db.insert(documents).values(docInserts);
+    }
+
     res.json(newCase);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/public', async (req, res) => {
+  try {
+    const queryResult = await db.select({
+      id: cases.id,
+      needsType: cases.needsType,
+      requiredAmount: cases.requiredAmount,
+      collectedAmount: cases.collectedAmount,
+      municipality: cases.municipality,
+      description: cases.description,
+      status: cases.status,
+      votesCount: cases.votesCount,
+      locationLat: cases.locationLat,
+      locationLng: cases.locationLng
+    }).from(cases);
+    
+    const publicCases = queryResult.map(c => ({
+      ...c,
+      citizenName: 'محتاج',
+      locationLat: c.locationLat ? parseFloat(c.locationLat).toFixed(2) : null,
+      locationLng: c.locationLng ? parseFloat(c.locationLng).toFixed(2) : null,
+    }));
+    
+    res.json(publicCases);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -180,6 +255,33 @@ router.post('/:id/documents', requireAuth, uploadHandler.array('documents'), asy
     ).returning();
     
     res.json({ success: true, documents: inserted });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Community Pulse Voting
+router.post('/:id/vote', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const caseId = req.params.id;
+    const userId = req.user!.userId;
+    
+    // Check if already voted
+    const existingVote = await db.select().from(caseVotes).where(and(eq(caseVotes.caseId, caseId), eq(caseVotes.userId, userId))).limit(1);
+    
+    if (existingVote.length > 0) {
+      return res.status(400).json({ error: 'You have already voted for this case.' });
+    }
+    
+    await db.insert(caseVotes).values({ caseId, userId });
+    
+    // Update count in cases
+    const [updatedCase] = await db.update(cases)
+      .set({ votesCount: sql`${cases.votesCount} + 1` })
+      .where(eq(cases.id, caseId))
+      .returning();
+      
+    res.json({ success: true, votesCount: updatedCase.votesCount });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

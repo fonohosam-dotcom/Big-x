@@ -56,6 +56,23 @@ router.post('/process', requireAuth, async (req: AuthRequest, res) => {
       referenceId: donation.id
     });
 
+    // Gamification: Update user impact points and level
+    const { users } = await import('../../db/schema.ts');
+    const userRecords = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+    if (userRecords.length > 0) {
+      const u = userRecords[0];
+      const newImpactPoints = (u.impactPoints || 0) + data.amount;
+      // Simple leveling: 1 level per 50 points
+      let newLevel = Math.floor(newImpactPoints / 50) + 1;
+      
+      await db.update(users)
+        .set({
+          impactPoints: newImpactPoints,
+          currentLevel: newLevel
+        })
+        .where(eq(users.id, req.user!.userId));
+    }
+
     res.json({ donation, paymentResult });
   } catch (error: any) {
     res.status(400).json({ error: error.message });

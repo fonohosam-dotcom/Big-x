@@ -13,9 +13,19 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   email: text('email').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
-  nationalId: text('national_id'), // Encrypted PII
+  nationalId: text('national_id').unique(), // Encrypted PII
   phone: text('phone'),
+  maritalStatus: text('marital_status'),
+  familyMembersCount: integer('family_members_count'),
+  passportNumber: text('passport_number'),
+  localBankAccount: text('local_bank_account'),
+  iban: text('iban'),
+  googleId: text('google_id').unique(),
+  appleId: text('apple_id').unique(),
   municipality: text('municipality'),
+  impactPoints: integer('impact_points').default(0),
+  currentLevel: integer('current_level').default(1),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -30,6 +40,16 @@ export const cases = pgTable('cases', {
   municipality: text('municipality').notNull(),
   locationLat: decimal('location_lat', { precision: 10, scale: 7 }),
   locationLng: decimal('location_lng', { precision: 10, scale: 7 }),
+  votesCount: integer('votes_count').default(0).notNull(),
+  isDemoData: boolean('is_demo_data').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const caseVotes = pgTable('case_votes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  caseId: uuid('case_id').references(() => cases.id).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -40,6 +60,7 @@ export const caseEvaluations = pgTable('case_evaluations', {
   evaluationScore: integer('evaluation_score'),
   aiAnalysis: jsonb('ai_analysis'),
   researcherNotes: text('researcher_notes'),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -52,6 +73,7 @@ export const donations = pgTable('donations', {
   status: donationStatusEnum('status').default('pending').notNull(),
   paymentMethod: text('payment_method'), // 'mobicash', 'sadad', 'lypay'
   providerRef: text('provider_ref'),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -75,6 +97,7 @@ export const projects = pgTable('projects', {
   currentAmount: decimal('current_amount', { precision: 12, scale: 2 }).default('0').notNull(),
   status: text('status').default('active').notNull(),
   municipality: text('municipality'),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -99,6 +122,7 @@ export const communityReports = pgTable('community_reports', {
   reportedBy: uuid('reported_by').references(() => users.id),
   description: text('description').notNull(),
   type: text('type').notNull(),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -106,6 +130,7 @@ export const whistleblowerReports = pgTable('whistleblower_reports', {
   id: uuid('id').defaultRandom().primaryKey(),
   reportText: text('report_text').notNull(),
   encryptedData: text('encrypted_data'),
+  isDemoData: boolean('is_demo_data').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -3,22 +3,52 @@ import { useAuthStore } from '../stores/authStore.ts';
 const BASE_URL = '/api';
 
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-  const token = useAuthStore.getState().token;
+  let token = useAuthStore.getState().token;
   
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
   
-  // Set default content type if body is a string (JSON) and Content-Type is not already set
   if (options.body && typeof options.body === 'string' && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  let response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
+
+  if (response.status === 401 || response.status === 403) {
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (refreshRes.ok) {
+          const { accessToken, refreshToken: newRefresh } = await refreshRes.json();
+          useAuthStore.getState().updateTokens(accessToken, newRefresh);
+          
+          // Retry the original request
+          headers.set('Authorization', `Bearer ${accessToken}`);
+          response = await fetch(`${BASE_URL}${endpoint}`, {
+            ...options,
+            headers,
+          });
+        } else {
+          useAuthStore.getState().logout();
+        }
+      } catch (err) {
+        useAuthStore.getState().logout();
+      }
+    } else {
+      useAuthStore.getState().logout();
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

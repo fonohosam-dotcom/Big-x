@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api.ts';
+import { useNotificationStore } from '../../stores/notificationStore.ts';
 
 export default function MedicalPortal() {
   const queryClient = useQueryClient();
+  const { addNotification } = useNotificationStore();
 
   const { data: inventory, isLoading } = useQuery({
     queryKey: ['medical-inventory'],
@@ -11,7 +13,13 @@ export default function MedicalPortal() {
 
   const seedMutation = useMutation({
     mutationFn: () => api.post('/medical/seed', {}),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['medical-inventory'] })
+    onSuccess: () => {
+      addNotification('تم إضافة البيانات التجريبية بنجاح', 'success');
+      queryClient.invalidateQueries({ queryKey: ['medical-inventory'] });
+    },
+    onError: (error: any) => {
+      addNotification(error.message || 'فشل إضافة البيانات', 'error');
+    }
   });
 
   return (
